@@ -177,7 +177,6 @@ def choose_minimax(board: List[List[int]], turn: int, config: Dict) -> Tuple[int
         config,
         0,
         start_time,
-        True
     ) # comeco com profundidade 0, quem ta jogando agora eh o max
 
     return move
@@ -189,8 +188,8 @@ def minimax(
         config: Dict,
         current_depth: int,
         start_time: float,
-        is_max: bool
     ) -> Tuple[int, int]:
+    is_max = ai_player == turn
     max_depth = int(config.get("max_depth"))
     max_time_ms = int(config.get("max_time_ms"))
 
@@ -225,7 +224,6 @@ def minimax(
                 config,
                 current_depth+1,
                 start_time,
-                False
             )
 
             if score > best_score:
@@ -243,7 +241,6 @@ def minimax(
                 config,
                 current_depth+1,
                 start_time,
-                True
             )
 
             if score < best_score:
