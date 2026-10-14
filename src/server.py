@@ -13,7 +13,8 @@ ROWS, COLS = 6, 7
 AI_PLAYERS = {
     "AI_Random" : search.choose_move,
     "AI_Dummy": search.choose_move_infinity,
-    "AI_Minimax": search.choose_minimax
+    "AI_Minimax": search.choose_minimax,
+    "AI_Heuristic": search.choose_heuristic,
 }
 
 def fallback_move(board):
