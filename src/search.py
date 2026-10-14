@@ -146,3 +146,108 @@ def choose_move_infinity(board: List[List[int]], turn: int, config: Dict) -> Tup
         i += 1
 
     return move
+
+# --
+# Implementação do Minimax
+# --
+def choose_minimax(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
+    """
+    Decide a coluna (0..6) para jogar agora.
+
+    Parâmetros:
+      - board: matriz 6x7 com valores {0,1,2}
+      - turn: 1 ou 2
+      - config: {"max_time_ms": int, "max_depth": int}
+
+    Retorna:
+      - col: int (0..6)
+    """
+    max_time_ms = int(config.get("max_time_ms"))
+    max_depth = int(config.get("max_depth"))
+    turn = int(turn)
+
+    print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
+    
+    start_time = time.time()
+
+    _, move = minimax(
+        board,
+        turn,
+        turn,
+        config,
+        0,
+        start_time,
+        True
+    ) # comeco com profundidade 0, quem ta jogando agora eh o max
+
+    return move
+
+def minimax(
+        board: List[List[int]],
+        turn: int,
+        ai_player: int,
+        config: Dict,
+        current_depth: int,
+        start_time: float,
+        is_max: bool
+    ) -> Tuple[int, int]:
+    max_depth = int(config.get("max_depth"))
+    max_time_ms = int(config.get("max_time_ms"))
+
+    def time_exceeded():
+        return max_time_ms > 0 and (time.time() - start_time) * 1000.0 >= max_time_ms
+
+    w = winner(board)
+    if w == ai_player:
+        return +1, None
+    if w == other(ai_player):
+        return -1, None
+    if is_full(board): # quer dizer que n tem vencedor e ta cheio => empate
+        return 0, None
+    if (current_depth >= max_depth) or time_exceeded():
+        return 0, None
+
+    legal = valid_moves(board)
+
+    if not legal:
+        # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
+        return 0, 0
+
+    if is_max:
+        best_score = float('-inf')
+        best_move = -1
+        for move in legal:
+            new_board = make_move(board, move, turn)
+            score, _ = minimax(
+                new_board,
+                other(turn),
+                ai_player,
+                config,
+                current_depth+1,
+                start_time,
+                False
+            )
+
+            if score > best_score:
+                best_score = score
+                best_move = move
+    else: #is_min
+        best_score = float('+inf')
+        best_move = -1
+        for move in legal:
+            new_board = make_move(board, move, turn)
+            score, _ = minimax(
+                new_board,
+                other(turn),
+                ai_player,
+                config,
+                current_depth+1,
+                start_time,
+                True
+            )
+
+            if score < best_score:
+                best_score = score
+                best_move = move
+
+    return best_score, best_move
