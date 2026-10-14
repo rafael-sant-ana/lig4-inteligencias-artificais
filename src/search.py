@@ -170,81 +170,71 @@ def choose_minimax(board: List[List[int]], turn: int, config: Dict) -> Tuple[int
     
     start_time = time.time()
 
+    # Quem vai jogar agora é a IA quando essa função é chamada
+    ai_player = turn
+
+    def minimax(
+        board: List[List[int]],
+        turn: int,
+        current_depth: int,
+    ) -> Tuple[int, int]:
+        is_max = ai_player == turn
+
+        def time_exceeded():
+            return max_time_ms > 0 and (time.time() - start_time) * 1000.0 >= max_time_ms
+
+        w = winner(board)
+        if w == ai_player:
+            return +1, None
+        if w == other(ai_player):
+            return -1, None
+        if is_full(board): # quer dizer que n tem vencedor e ta cheio => empate
+            return 0, None
+        if (current_depth >= max_depth) or time_exceeded():
+            return 0, None
+
+        legal = valid_moves(board)
+
+        if not legal:
+            # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
+            return 0, 0
+
+        if is_max:
+            best_score = float('-inf')
+            best_move = -1
+            for move in legal:
+                new_board = make_move(board, move, turn)
+                score, _ = minimax(
+                    new_board,
+                    other(turn),
+                    current_depth+1,
+                )
+
+                if score > best_score:
+                    best_score = score
+                    best_move = move
+        else: #is_min
+            best_score = float('+inf')
+            best_move = -1
+            for move in legal:
+                new_board = make_move(board, move, turn)
+                score, _ = minimax(
+                    new_board,
+                    other(turn),
+                    current_depth+1,
+                )
+
+                if score < best_score:
+                    best_score = score
+                    best_move = move
+
+        return best_score, best_move
+
     _, move = minimax(
         board,
         turn,
-        turn,
-        config,
         0,
-        start_time,
     ) # comeco com profundidade 0, quem ta jogando agora eh o max
 
     return move
 
-def minimax(
-        board: List[List[int]],
-        turn: int,
-        ai_player: int,
-        config: Dict,
-        current_depth: int,
-        start_time: float,
-    ) -> Tuple[int, int]:
-    is_max = ai_player == turn
-    max_depth = int(config.get("max_depth"))
-    max_time_ms = int(config.get("max_time_ms"))
-
-    def time_exceeded():
-        return max_time_ms > 0 and (time.time() - start_time) * 1000.0 >= max_time_ms
-
-    w = winner(board)
-    if w == ai_player:
-        return +1, None
-    if w == other(ai_player):
-        return -1, None
-    if is_full(board): # quer dizer que n tem vencedor e ta cheio => empate
-        return 0, None
-    if (current_depth >= max_depth) or time_exceeded():
-        return 0, None
-
-    legal = valid_moves(board)
-
-    if not legal:
-        # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
-        return 0, 0
-
-    if is_max:
-        best_score = float('-inf')
-        best_move = -1
-        for move in legal:
-            new_board = make_move(board, move, turn)
-            score, _ = minimax(
-                new_board,
-                other(turn),
-                ai_player,
-                config,
-                current_depth+1,
-                start_time,
-            )
-
-            if score > best_score:
-                best_score = score
-                best_move = move
-    else: #is_min
-        best_score = float('+inf')
-        best_move = -1
-        for move in legal:
-            new_board = make_move(board, move, turn)
-            score, _ = minimax(
-                new_board,
-                other(turn),
-                ai_player,
-                config,
-                current_depth+1,
-                start_time,
-            )
-
-            if score < best_score:
-                best_score = score
-                best_move = move
-
-    return best_score, best_move
