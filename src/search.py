@@ -512,9 +512,9 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
 
         w = winner(board)
         if w == ai_player:
-            return +10000, None
+            return +10000-depth, None
         if w == other(ai_player):
-            return -10000, None
+            return -10000+depth, None
         if is_full(board): # quer dizer que n tem vencedor e ta cheio => empate
             return 0, None
         if (current_depth >= target_depth):
