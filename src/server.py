@@ -15,6 +15,7 @@ AI_PLAYERS = {
     "AI_Dummy": search.choose_move_infinity,
     "AI_Minimax": search.choose_minimax,
     "AI_Heuristic": search.choose_heuristic,
+    "AI_IterativeDeepening": search.choose_iterative_deepening
 }
 
 def fallback_move(board):

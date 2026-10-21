@@ -1,4 +1,7 @@
 env
 
 # macOS folder icon files (invalid filenames on Windows)
-Icon[]
+Icon[
+]
+
+__pycache__
