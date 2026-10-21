@@ -351,6 +351,136 @@ def choose_heuristic(board: List[List[int]], turn: int, config: Dict) -> Tuple[i
 
     return move
 
+# ---
+# implementacao com alfa-beta
+# ---
+def choose_alphabeta(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
+    """
+    Decide a coluna (0..6) para jogar agora.
+
+    Parâmetros:
+      - board: matriz 6x7 com valores {0,1,2}
+      - turn: 1 ou 2
+      - config: {"max_time_ms": int, "max_depth": int}
+
+    Retorna:
+      - col: int (0..6)
+    """
+    max_time_ms = int(config.get("max_time_ms"))
+    max_depth = int(config.get("max_depth"))
+    turn = int(turn)
+
+    print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
+    
+    start_time = time.time()
+
+    # Quem vai jogar agora é a IA quando essa função é chamada
+    ai_player = turn
+
+    column_weights = [1,2,3,4,3,2,1]
+
+    def heuristic(current_board):
+        # outra pessoa tem muitos na column weight => ele ta melhor
+
+        value = 0
+        for col in range(COLS):
+            col_rows = [row[col] for row in current_board]
+
+            count_turn = 0
+            count_other = 0
+            for el in col_rows:
+                if el == turn: # turn sou eu aqui!
+                    count_turn += 1
+                elif el == other(turn):
+                    count_other += 1
+
+            value += column_weights[col] * (count_turn - count_other)
+
+        return value
+    
+    def alphabeta(
+        board: List[List[int]],
+        turn: int,
+        current_depth: int,
+        alpha: float = float('-inf'),
+        beta: float = float('inf')
+    ) -> Tuple[int, int]:
+        is_max = ai_player == turn
+        legal = valid_moves(board)
+
+        def time_exceeded():
+            return max_time_ms > 0 and (time.time() - start_time) * 1000.0 >= max_time_ms
+
+        w = winner(board)
+        if w == ai_player:
+            return +10000, None
+        if w == other(ai_player):
+            return -10000, None
+        if is_full(board): # quer dizer que n tem vencedor e ta cheio => empate
+            return 0, None
+        if (current_depth >= max_depth) or time_exceeded():
+            score = heuristic(board)
+
+            return score, None
+
+        if not legal:
+            # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
+            return 0, 0
+
+        if is_max:
+            best_score = float('-inf')
+            best_move = -1
+            for move in legal:
+                new_board = make_move(board, move, turn)
+                score, _ = alphabeta(
+                    new_board,
+                    other(turn),
+                    current_depth+1,
+                    alpha,
+                    beta,
+                )
+
+                if score > best_score:
+                    best_score = score
+                    best_move = move
+
+                alpha = max(alpha, best_score)
+
+                if beta <= alpha:
+                    break
+        else: #is_min
+            best_score = float('+inf')
+            best_move = -1
+            for move in legal:
+                new_board = make_move(board, move, turn)
+                score, _ = alphabeta(
+                    new_board,
+                    other(turn),
+                    current_depth+1,
+                    alpha,
+                    beta,
+                )
+
+                if score < best_score:
+                    best_score = score
+                    best_move = move
+
+                beta = min(beta, best_score)
+
+                if beta <= alpha:
+                    break
+
+        return best_score, best_move
+
+    _, move = alphabeta(
+        board,
+        turn,
+        0,
+    ) # comeco com profundidade 0, quem ta jogando agora eh o max
+
+    return move
+
+
 # Classe pra pegar timeout
 class TimeoutException(Exception):
     pass
@@ -402,11 +532,13 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
 
         return value
     
-    def minimax(
+    def alphabeta(
         board: List[List[int]],
         turn: int,
         current_depth: int,
-        target_depth: int
+        target_depth: int,
+        alpha: float = float('-inf'),
+        beta: float = float('inf')
     ) -> Tuple[int, int]:
         if time_exceeded():
             raise TimeoutException()
@@ -433,44 +565,55 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
             best_move = -1
             for move in legal:
                 new_board = make_move(board, move, turn)
-                score, _ = minimax(
+                score, _ = alphabeta(
                     new_board,
                     other(turn),
                     current_depth+1,
-                    target_depth
+                    target_depth,
+                    alpha,
+                    beta
                 )
 
                 if score > best_score:
                     best_score = score
                     best_move = move
+
+                alpha = max(alpha, best_score)
+                if beta <= alpha:
+                    break
         else: #is_min
             best_score = float('+inf')
             best_move = -1
             for move in legal:
                 new_board = make_move(board, move, turn)
-                score, _ = minimax(
+                score, _ = alphabeta(
                     new_board,
                     other(turn),
                     current_depth+1,
-                    target_depth
+                    target_depth,
+                    alpha,
+                    beta
                 )
 
                 if score < best_score:
                     best_score = score
                     best_move = move
 
+                beta = min(beta, best_score)
+                if beta <= alpha:
+                    break
+
         return best_score, best_move
 
-    best_score = 0
-    score = None
+    legal = valid_moves(board)
+    best_move = legal[0] if legal else 0
     for depth in range(1, max_depth + 1):
         if time_exceeded():
             break
         try:
-            score, move = minimax(board, turn, 0, depth) # comeco com profundidade 0, quem ta jogando agora eh o max
-            if move is not None and score > best_score:
+            score, move = alphabeta(board, turn, 0, depth) # comeco com profundidade 0, quem ta jogando agora eh o max
+            if move is not None:
                 best_move = move
-                best_score = score
 
             if abs(score) >= 9000: # achou uma vitoria garantida
                 break
