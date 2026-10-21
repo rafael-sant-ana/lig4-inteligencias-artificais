@@ -11,8 +11,8 @@ CORS(app)
 ROWS, COLS = 6, 7
 
 AI_PLAYERS = {
-    "AI_Random" : search.choose_move,
-    "AI_Dummy": search.choose_move_infinity,
+    "AI_Final" : search.choose_move,
+    "AI_Random" : search.choose_random,
     "AI_Minimax": search.choose_minimax,
     "AI_Heuristic": search.choose_heuristic,
     "AI_AlphaBeta": search.choose_alphabeta,

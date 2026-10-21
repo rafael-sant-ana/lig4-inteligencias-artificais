@@ -74,6 +74,9 @@ def other(player: int) -> int:
 # ÚNICO PONTO A SER IMPLEMENTADO PELOS ALUNOS
 # -----------------------------------------------------------------------------
 def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
+    return choose_iterative_deepening(board, turn, config)
+    
+def choose_random(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
     """
     Decide a coluna (0..6) para jogar agora.
 
@@ -90,12 +93,6 @@ def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, D
     turn = int(turn)
 
     print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
-    
-    start = time.time()
-
-    # Função auxiliar para checar tempo decorrido   
-    def time_exceeded():
-        return max_time_ms > 0 and (time.time() - start) * 1000.0 >= max_time_ms
     
     legal = valid_moves(board)
 
@@ -106,44 +103,6 @@ def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, D
     
     # VERSÃO INICIAL: escolhe aleatoriamente entre as jogadas legais
     move = random.choice(legal)
-
-    return move
-
-def choose_move_infinity(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
-    """
-    Decide a coluna (0..6) para jogar agora.
-
-    Parâmetros:
-      - board: matriz 6x7 com valores {0,1,2}
-      - turn: 1 ou 2
-      - config: {"max_time_ms": int, "max_depth": int}
-
-    Retorna:
-      - col: int (0..6)
-    """
-    max_time_ms = int(config.get("max_time_ms"))
-    max_depth = int(config.get("max_depth"))
-    turn = int(turn)
-
-    print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
-    
-    start = time.time()
-
-    # Função auxiliar para checar tempo decorrido   
-    def time_exceeded():
-        return max_time_ms > 0 and (time.time() - start) * 1000.0 >= max_time_ms
-    
-    legal = valid_moves(board)
-
-    move = 0
-    if not legal:
-        # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
-        return move
-    
-    # VERSÃO INICIAL: escolhe aleatoriamente entre as jogadas legais
-    i = 0
-    while True:
-        i += 1
 
     return move
 
@@ -510,6 +469,11 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
 
     column_weights = [1,2,3,4,3,2,1]
 
+    def ordered_moves(b: List[List[int]]) -> List[int]:
+        preferred_order = [3,2,4,1,5,0,6]
+        legal = valid_moves(b)
+        return [c for c in preferred_order if c in legal]
+
     def time_exceeded():
         return max_time_ms > 0 and (time.time() - start_time) * 1000.0 >= max_time_ms
 
@@ -543,7 +507,7 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
         if time_exceeded():
             raise TimeoutException()
         is_max = ai_player == turn
-        legal = valid_moves(board)
+        legal = ordered_moves(board)
 
 
         w = winner(board)
@@ -605,7 +569,7 @@ def choose_iterative_deepening(board: List[List[int]], turn: int, config: Dict) 
 
         return best_score, best_move
 
-    legal = valid_moves(board)
+    legal = ordered_moves(board)
     best_move = legal[0] if legal else 0
     for depth in range(1, max_depth + 1):
         if time_exceeded():
